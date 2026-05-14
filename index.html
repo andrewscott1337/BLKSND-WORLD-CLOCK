@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLKSND | WORLD CLOCK</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #050505; color: #ededed; font-family: 'JetBrains Mono', monospace; }
+        
+        .panel { 
+            background: #0a0a0a; 
+            border: 1px solid #222; 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.9);
+        }
+        
+        .location-card {
+            border-bottom: 1px solid #1a1a1a;
+            transition: background 0.2s ease;
+        }
+        .location-card:last-child { border-bottom: none; }
+        .location-card:hover { background: #111; }
+
+        /* Minecraft-Style Dial */
+        .watch-container {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid #333;
+            background: #000;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        
+        .watch-dial {
+            width: 100%; height: 100%; border-radius: 50%;
+            position: relative; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .moon {
+            position: absolute; top: 50%; left: 50%; width: 8px; height: 8px;
+            border-radius: 50%; box-shadow: inset 2px -2px 0 0 #aaa;
+        }
+
+        .sun {
+            position: absolute; top: 50%; left: 50%; width: 10px; height: 10px;
+            border-radius: 50%; background: #1a1a1a; 
+        }
+
+        .watch-marker {
+            position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+            width: 2px; height: 5px; background: #ff0000; z-index: 10;
+        }
+
+        /* Weather UI Icons */
+        .weather-icon svg { width: 14px; height: 14px; fill: #555; }
+
+        /* Hybrid Time Input System */
+        .time-wrapper {
+            position: relative;
+            width: 155px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        .time-display {
+            position: absolute;
+            right: 0;
+            pointer-events: none;
+            transition: opacity 0.1s ease;
+        }
+        input[type="time"] {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            color: #fff;
+            border: none;
+            font-size: 1.5rem;
+            font-weight: 300;
+            outline: none;
+            text-align: right;
+            cursor: pointer;
+            opacity: 0; /* Hidden until focused */
+        }
+        input[type="time"]:focus { opacity: 1; }
+        input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
+
+        .clock-trigger { opacity: 0.3; transition: opacity 0.2s; cursor: pointer; }
+        .clock-trigger:hover { opacity: 1; }
+        
+        .btn-sync { transition: all 0.2s ease; }
+        .btn-sync:hover { background-color: #fff; color: #000; border-color: #fff; }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div class="panel w-full max-w-[32rem] p-8 rounded-xl">
+        
+        <!-- Header -->
+        <div class="mb-10 flex justify-between items-end border-b border-[#222] pb-8">
+            <div>
+                <h1 class="text-3xl font-bold tracking-[0.3em] uppercase text-white leading-none">BLKSND</h1>
+                <h2 class="text-[10px] tracking-[0.5em] opacity-40 uppercase mt-3">World Clock</h2>
+            </div>
+        </div>
+
+        <div class="space-y-2 mb-8" id="locations-container">
+            <!-- Injected via JS -->
+        </div>
+
+        <button onclick="setNow()" class="btn-sync w-full p-5 border border-[#222] text-[#666] text-[10px] font-bold tracking-[0.4em] uppercase cursor-pointer rounded-lg bg-white/5">
+            Sync to System Time
+        </button>
+    </div>
+
+    <script>
+        // Global format state (detected on load)
+        let is24HourFormat = false;
+
+        // Data Order: Tokyo, LA, Tbilisi, Meknes, Denver, NYC
+        const locData = {
+            tokyo:   { name: 'Tokyo',       zone: 'Asia/Tokyo',          lat: 35.6762, lon: 139.6503 },
+            la:      { name: 'Los Angeles', zone: 'America/Los_Angeles', lat: 34.0522, lon: -118.2437 },
+            tbilisi: { name: 'Tbilisi',     zone: 'Asia/Tbilisi',        lat: 41.7151, lon: 44.7833 },
+            meknes:  { name: 'Meknes',      zone: 'Africa/Casablanca',   lat: 33.8935, lon: -5.5328 },
+            denver:  { name: 'Denver',      zone: 'America/Denver',      lat: 39.7392, lon: -104.9903 },
+            nyc:     { name: 'New York',    zone: 'America/New_York',    lat: 40.7128, lon: -74.0060 }
+        };
+
+        const weatherIcons = {
+            clear: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>`,
+            cloudy: `<svg viewBox="0 0 24 24"><path d="M17.5 19c2.5 0 4.5-2 4.5-4.5 0-2.3-1.7-4.1-3.9-4.5-.6-3.3-3.4-5.8-6.9-5.8-3 0-5.6 1.9-6.5 4.7C2.6 9.5 1 11.2 1 13.5 1 16 3 18 5.5 18H17.5z"/></svg>`,
+            rain: `<svg viewBox="0 0 24 24"><path d="M20 13a4 4 0 00-8 0M8 13a4 4 0 00-8 0M10 18l-1 3M14 18l-1 3M6 18l-1 3"/></svg>`,
+            snow: `<svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M4.93 19.07L19.07 4.93"/></svg>`,
+            thunder: `<svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`
+        };
+
+        function getIconByWMO(code) {
+            if (code <= 1) return weatherIcons.clear;
+            if (code <= 3 || (code >= 45 && code <= 48)) return weatherIcons.cloudy;
+            if (code >= 51 && code <= 67) return weatherIcons.rain;
+            if (code >= 71 && code <= 86) return weatherIcons.snow;
+            if (code >= 95) return weatherIcons.thunder;
+            return weatherIcons.clear;
+        }
+
+        function buildUI() {
+            const container = document.getElementById('locations-container');
+            Object.keys(locData).forEach(loc => {
+                const data = locData[loc];
+                const html = `
+                <div class="location-card p-4 flex justify-between items-center">
+                    <div class="flex items-center gap-5">
+                        <div class="watch-container">
+                            <div class="watch-marker"></div>
+                            <div class="watch-dial" id="dial-${loc}">
+                                <div class="moon" id="moon-${loc}"></div>
+                                <div class="sun" id="sun-${loc}"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-col gap-1 border-l border-[#222] pl-5">
+                            <label class="text-[11px] font-bold uppercase tracking-[0.2em] opacity-80">${data.name}</label>
+                            <div class="flex items-center gap-2 text-[9px] tracking-widest opacity-40 font-bold">
+                                <span class="weather-icon" id="w-icon-${loc}">${weatherIcons.clear}</span>
+                                <span id="w-temp-${loc}">--°C | --°F</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <div class="time-wrapper">
+                            <input type="time" id="input-${loc}" oninput="syncTimes('${loc}')" onfocus="document.getElementById('display-${loc}').style.opacity=0" onblur="document.getElementById('display-${loc}').style.opacity=1">
+                            <div id="display-${loc}" class="time-display text-2xl font-light tracking-tight text-white">--:--</div>
+                        </div>
+                        <div class="clock-trigger" onclick="document.getElementById('input-${loc}').showPicker()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </div>
+                    </div>
+                </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        async function fetchWeather() {
+            const lats = Object.values(locData).map(l => l.lat).join(',');
+            const lons = Object.values(locData).map(l => l.lon).join(',');
+            try {
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current_weather=true`);
+                const data = await res.json();
+                
+                const results = Array.isArray(data) ? data : (data.length ? data : [data]); 
+                
+                Object.keys(locData).forEach((loc, i) => {
+                    const weather = Array.isArray(data) ? data[i].current_weather : (Object.keys(locData).length > 1 ? data[i].current_weather : data.current_weather);
+                    
+                    if(weather) {
+                        const tempC = Math.round(weather.temperature);
+                        const tempF = Math.round((tempC * 9/5) + 32);
+                        document.getElementById(`w-temp-${loc}`).innerHTML = `${tempC}°C <span class="opacity-20 mx-1">|</span> ${tempF}°F`;
+                        document.getElementById(`w-icon-${loc}`).innerHTML = getIconByWMO(weather.weathercode);
+                    }
+                });
+            } catch (e) { console.error("Weather Sync Error", e); }
+        }
+
+        function calibrateAstronomicalDials() {
+            const now = new Date();
+            Object.keys(locData).forEach(loc => {
+                const data = locData[loc];
+                const times = SunCalc.getTimes(now, data.lat, data.lon);
+                
+                const getDec = (d) => {
+                    const str = d.toLocaleTimeString('en-GB', { timeZone: data.zone, hour12: false });
+                    const [h, m] = str.split(':').map(Number);
+                    return h + (m/60);
+                };
+
+                const sr = getDec(times.sunrise);
+                const ss = getDec(times.sunset);
+                
+                const dial = document.getElementById(`dial-${loc}`);
+                dial.style.background = `conic-gradient(from 0deg, #111 0deg, #111 ${(sr/24)*360}deg, #d4d4d4 ${(sr/24)*360}deg, #d4d4d4 ${(ss/24)*360}deg, #111 ${(ss/24)*360}deg, #111 360deg)`;
+                
+                const nDeg = (((sr + ss)/2)/24)*360;
+                const mDeg = (((sr + ss + 24)/2)/24)*360;
+                
+                document.getElementById(`sun-${loc}`).style.transform = `translate(-50%, -50%) rotate(${nDeg}deg) translateY(-12px)`;
+                document.getElementById(`moon-${loc}`).style.transform = `translate(-50%, -50%) rotate(${mDeg}deg) translateY(-12px)`;
+            });
+        }
+
+        function syncTimes(source) {
+            const val = document.getElementById(`input-${source}`).value;
+            if (!val) return;
+            const [h, m] = val.split(':').map(Number);
+            
+            const getTzOffset = (tz) => {
+                const n = new Date();
+                const u = new Date(n.toLocaleString('en-US', { timeZone: 'UTC' }));
+                const t = new Date(n.toLocaleString('en-US', { timeZone: tz }));
+                return (t - u) / 36e5;
+            };
+
+            const sourceOff = getTzOffset(locData[source].zone);
+            const utcHours = h - sourceOff;
+
+            Object.keys(locData).forEach(loc => {
+                const off = getTzOffset(locData[loc].zone);
+                let localH = Math.floor(utcHours + off) % 24;
+                if (localH < 0) localH += 24;
+
+                const finalTime = `${String(localH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                
+                // Set the hidden native input value
+                document.getElementById(`input-${loc}`).value = finalTime;
+                
+                // Render the custom text overlay using the detected format
+                if (is24HourFormat) {
+                    document.getElementById(`display-${loc}`).innerHTML = finalTime;
+                } else {
+                    const ampm = localH >= 12 ? 'PM' : 'AM';
+                    let h12 = localH % 12;
+                    if (h12 === 0) h12 = 12;
+                    document.getElementById(`display-${loc}`).innerHTML = `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} <span class="text-sm opacity-50 ml-1">${ampm}</span>`;
+                }
+                
+                // Rotate Astronomical Dial
+                const deg = -((localH + (m/60))/24)*360;
+                document.getElementById(`dial-${loc}`).style.transform = `rotate(${deg}deg)`;
+            });
+        }
+
+        function setNow() {
+            const n = new Date();
+            const h = String(n.getHours()).padStart(2, '0');
+            const m = String(n.getMinutes()).padStart(2, '0');
+            document.getElementById('input-la').value = `${h}:${m}`;
+            syncTimes('la');
+        }
+
+        // Initialize
+        buildUI();
+        calibrateAstronomicalDials();
+        
+        // Locale Detection for Auto 12/24H Formatting
+        is24HourFormat = new Intl.DateTimeFormat([], { hour: 'numeric' }).resolvedOptions().hourCycle.startsWith('h2');
+        
+        setNow();
+        fetchWeather();
+    </script>
+</body>
+</html>
