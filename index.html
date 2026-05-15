@@ -181,7 +181,7 @@
                             <input type="time" id="input-${loc}" oninput="syncTimes('${loc}')" onfocus="document.getElementById('display-${loc}').style.opacity=0" onblur="document.getElementById('display-${loc}').style.opacity=1">
                             <div id="display-${loc}" class="time-display text-2xl font-light tracking-tight text-white">--:--</div>
                         </div>
-                        <div class="clock-trigger" onclick="document.getElementById('input-${loc}').showPicker()">
+                        <div class="clock-trigger hidden sm:block" onclick="document.getElementById('input-${loc}').showPicker()">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         </div>
                     </div>
