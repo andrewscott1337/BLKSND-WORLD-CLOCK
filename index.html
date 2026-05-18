@@ -124,6 +124,19 @@
         // Global format state (detected on load)
         let is24HourFormat = false;
 
+        const getTzOffset = (tz) => {
+            const n = new Date();
+            const u = new Date(n.toLocaleString('en-US', { timeZone: 'UTC' }));
+            const t = new Date(n.toLocaleString('en-US', { timeZone: tz }));
+            return (t - u) / 36e5;
+        };
+
+        const getDec = (d, zone) => {
+            const str = d.toLocaleTimeString('en-GB', { timeZone: zone, hour12: false });
+            const [h, m] = str.split(':').map(Number);
+            return h + (m/60);
+        };
+
         // Data Order: Tokyo, LA, Tbilisi, Meknes, Denver, NYC
         const locData = {
             tokyo:   { name: 'Tokyo',       zone: 'Asia/Tokyo',          lat: 35.6762, lon: 139.6503 },
@@ -219,14 +232,8 @@
                 const data = locData[loc];
                 const times = SunCalc.getTimes(now, data.lat, data.lon);
                 
-                const getDec = (d) => {
-                    const str = d.toLocaleTimeString('en-GB', { timeZone: data.zone, hour12: false });
-                    const [h, m] = str.split(':').map(Number);
-                    return h + (m/60);
-                };
-
-                const sr = getDec(times.sunrise);
-                const ss = getDec(times.sunset);
+                const sr = getDec(times.sunrise, data.zone);
+                const ss = getDec(times.sunset, data.zone);
                 
                 const dial = document.getElementById(`dial-${loc}`);
                 dial.style.background = `conic-gradient(from 0deg, #111 0deg, #111 ${(sr/24)*360}deg, #d4d4d4 ${(sr/24)*360}deg, #d4d4d4 ${(ss/24)*360}deg, #111 ${(ss/24)*360}deg, #111 360deg)`;
@@ -244,13 +251,6 @@
             if (!val) return;
             const [h, m] = val.split(':').map(Number);
             
-            const getTzOffset = (tz) => {
-                const n = new Date();
-                const u = new Date(n.toLocaleString('en-US', { timeZone: 'UTC' }));
-                const t = new Date(n.toLocaleString('en-US', { timeZone: tz }));
-                return (t - u) / 36e5;
-            };
-
             const sourceOff = getTzOffset(locData[source].zone);
             const utcHours = h - sourceOff;
 
