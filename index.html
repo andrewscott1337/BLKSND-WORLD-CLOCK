@@ -201,7 +201,7 @@
                 const results = Array.isArray(data) ? data : (data.length ? data : [data]); 
                 
                 Object.keys(locData).forEach((loc, i) => {
-                    const weather = Array.isArray(data) ? data[i].current_weather : (Object.keys(locData).length > 1 ? data[i].current_weather : data.current_weather);
+                    const weather = results[i]?.current_weather;
                     
                     if(weather) {
                         const tempC = Math.round(weather.temperature);
