@@ -200,8 +200,13 @@
                 
                 const results = Array.isArray(data) ? data : (data.length ? data : [data]); 
                 
-                Object.keys(locData).forEach((loc, i) => {
-                    const weather = Array.isArray(data) ? data[i].current_weather : (Object.keys(locData).length > 1 ? data[i].current_weather : data.current_weather);
+                const isDataArray = Array.isArray(data);
+                const locKeys = Object.keys(locData);
+                const isMultiLoc = locKeys.length > 1;
+
+                for (let i = 0; i < locKeys.length; i++) {
+                    const loc = locKeys[i];
+                    const weather = isDataArray ? data[i].current_weather : (isMultiLoc ? data[i].current_weather : data.current_weather);
                     
                     if(weather) {
                         const tempC = Math.round(weather.temperature);
@@ -209,7 +214,7 @@
                         document.getElementById(`w-temp-${loc}`).innerHTML = `${tempC}°C <span class="opacity-20 mx-1">|</span> ${tempF}°F`;
                         document.getElementById(`w-icon-${loc}`).innerHTML = getIconByWMO(weather.weathercode, weather.is_day);
                     }
-                });
+                }
             } catch (e) { console.error("Weather Sync Error", e); }
         }
 
