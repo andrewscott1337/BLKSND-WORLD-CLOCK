@@ -239,17 +239,20 @@
             });
         }
 
+        const tzOffsetCache = {};
+        const getTzOffset = (tz) => {
+            if (tzOffsetCache[tz] !== undefined) return tzOffsetCache[tz];
+            const n = new Date();
+            const u = new Date(n.toLocaleString('en-US', { timeZone: 'UTC' }));
+            const t = new Date(n.toLocaleString('en-US', { timeZone: tz }));
+            tzOffsetCache[tz] = (t - u) / 36e5;
+            return tzOffsetCache[tz];
+        };
+
         function syncTimes(source) {
             const val = document.getElementById(`input-${source}`).value;
             if (!val) return;
             const [h, m] = val.split(':').map(Number);
-            
-            const getTzOffset = (tz) => {
-                const n = new Date();
-                const u = new Date(n.toLocaleString('en-US', { timeZone: 'UTC' }));
-                const t = new Date(n.toLocaleString('en-US', { timeZone: tz }));
-                return (t - u) / 36e5;
-            };
 
             const sourceOff = getTzOffset(locData[source].zone);
             const utcHours = h - sourceOff;
