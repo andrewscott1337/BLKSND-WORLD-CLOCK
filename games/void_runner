@@ -56,9 +56,9 @@
 
             <div class="space-y-4 mb-10 text-center border border-[#111] bg-black/50 p-6 rounded">
                 <p class="text-xs tracking-[0.2em] text-[#aaa] uppercase leading-loose font-light">
-                    "Intoxicate and burying. <br>
-                    <span class="text-[#ff003c] font-bold">Heat Heat Heat Heat up here</span> <br>
-                    Kill me again until I wash over."
+                    "I could see right through me. <br>
+                    <span class="text-[#ff003c] font-bold">Always running from the fear of losing </span> <br>
+                    If all of this is true...."
                 </p>
             </div>
 
@@ -132,12 +132,12 @@
             
             // Sequence timed to distance traveled
             lyrics: [
-                { dist: 8000, text: "INTOXICATE" },
-                { dist: 16000, text: "AND BURYING" },
-                { dist: 28000, text: "HEAT HEAT HEAT" },
-                { dist: 38000, text: "UP HERE" },
-                { dist: 50000, text: "KILL ME AGAIN" },
-                { dist: 65000, text: "UNTIL I WASH OVER" }
+                { dist: 8000, text: "POLLUTE. INTOXICATE." },
+                { dist: 16000, text: "IN A PLACE WITH NO NAME" },
+                { dist: 28000, text: "I KNOW THAT IN TIME" },
+                { dist: 38000, text: "WATCH OVER ME" },
+                { dist: 50000, text: "IF ALL OF THIS IS TRUE" },
+                { dist: 65000, text: "LIGHT UP THE SKY TONIGHT" }
             ],
             nextLyric: 0,
             lyricTimer: 0,
