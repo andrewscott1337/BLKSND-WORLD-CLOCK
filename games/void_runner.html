@@ -43,50 +43,33 @@
     <canvas id="gameCanvas"></canvas>
     <div class="scanlines"></div>
 
-    <div id="ui-layer" class="w-full h-screen flex items-center justify-center p-8">
+    <div id="ui-layer" class="w-full h-screen p-8 relative">
         
-        <div id="menu-panel" class="panel w-full max-w-[36rem] p-10 rounded-xl pointer-auto relative overflow-hidden">
-            
-            <div class="flex justify-between items-end border-b border-[#222] pb-8 mb-8">
-                <div>
-                    <h1 class="text-4xl font-black tracking-[0.35em] font-['Montserrat'] uppercase text-white leading-none glitch-text">BLKSND</h1>
-                    <h2 class="text-[10px] font-light tracking-[0.5em] opacity-60 uppercase mt-3 text-[#ff003c]">A Place With No Name // Framework</h2>
-                </div>
-            </div>
+        <div id="hud-panel" class="absolute top-8 left-8 flex flex-col items-start pointer-events-none">
+            <div class="flex flex-col gap-1 max-w-sm">
+                <h1 class="text-4xl font-black tracking-[0.35em] font-['Montserrat'] uppercase text-white leading-none glitch-text">BLKSND</h1>
+                <h2 class="text-[10px] font-light tracking-[0.5em] opacity-60 uppercase mt-2 mb-4 text-[#ff003c]">A Place With No Name // Framework</h2>
 
-            <div class="space-y-4 mb-10 text-center border border-[#111] bg-black/50 p-6 rounded">
-                <p class="text-xs tracking-[0.2em] text-[#aaa] uppercase leading-loose font-light">
-                    "I could see right through me. <br>
-                    <span class="text-[#ff003c] font-bold">Always running from the fear of losing </span> <br>
+                <p class="text-[9px] tracking-[0.2em] text-[#aaa] uppercase leading-relaxed font-light mb-4 border-l-2 border-[#ff003c] pl-3 py-1">
+                    "I could see right through me.<br>
+                    Always running from the fear of losing<br>
                     If all of this is true...."
                 </p>
-            </div>
 
-            <div class="space-y-3 mb-4">
-                <button onclick="Engine.initOutrun()" class="btn-launch w-full p-5 border border-[#333] text-[#fff] text-[12px] font-black tracking-[0.4em] uppercase cursor-pointer rounded-lg bg-[#050505] text-center group relative overflow-hidden">
-                    <span class="relative z-10">INITIATE // ACCELERATION</span>
-                </button>
-            </div>
-            
-            <div class="mt-6 pt-4 border-t border-white/5 text-[9px] opacity-40 uppercase tracking-widest flex justify-between">
-                <span>Dodge: Left/Right Arrows</span>
-                <span>Overdrive: Hold Spacebar</span>
-            </div>
-        </div>
+                <div class="text-[8px] opacity-40 uppercase tracking-widest mb-6 space-y-1">
+                    <div>Controls //</div>
+                    <div>Dodge: Left/Right Arrows</div>
+                    <div>Overdrive: Hold Spacebar</div>
+                </div>
 
-        <div id="hud-panel" class="hidden absolute top-8 left-8 right-8 flex justify-between items-start pointer-events-none">
-            <div class="flex flex-col gap-1">
-                <h2 class="text-3xl font-black font-['Montserrat'] tracking-[0.3em] uppercase text-white glitch-text" id="hud-title">VOID_RUNNER</h2>
+                <h2 class="text-2xl font-black font-['Montserrat'] tracking-[0.3em] uppercase text-white glitch-text" id="hud-title">VOID_RUNNER</h2>
                 <div class="text-[10px] tracking-[0.3em] opacity-60 uppercase mt-1 text-[#aaa]" id="hud-stats">VELOCITY: 0.00 | INTEGRITY: 100%</div>
                 <div class="text-[11px] font-black text-[#ff003c] mt-2 tracking-[0.4em] uppercase hidden glitch-text" id="hud-alert">CRITICAL DAMAGE</div>
-            </div>
-            <button onclick="Engine.exitToMenu()" class="btn-exit px-5 py-3 border border-[#333] text-white text-[10px] font-bold tracking-[0.3em] uppercase cursor-pointer rounded bg-black/80 backdrop-blur pointer-auto">
-                ABORT RUN
-            </button>
-        </div>
 
-        <div id="lyric-display" class="hidden absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-            <h1 class="text-5xl md:text-7xl font-black font-['Montserrat'] tracking-[0.2em] text-white glitch-text text-center w-3/4 leading-tight" style="opacity: 0.9; text-transform: uppercase;"></h1>
+                <div id="lyric-display" class="mt-4 pointer-events-none z-20">
+                    <h1 class="text-[10px] font-black font-['Montserrat'] tracking-[0.2em] text-[#ff003c] glitch-text leading-tight" style="opacity: 0.9; text-transform: uppercase;"></h1>
+                </div>
+            </div>
         </div>
 
     </div>
@@ -94,7 +77,6 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const menuPanel = document.getElementById('menu-panel');
         const hudPanel = document.getElementById('hud-panel');
         const hudStats = document.getElementById('hud-stats');
         const hudAlert = document.getElementById('hud-alert');
@@ -154,20 +136,13 @@
             },
 
             exitToMenu: function() {
-                this.state = 'menu';
-                cancelAnimationFrame(this.animationId);
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                menuPanel.classList.remove('hidden');
-                hudPanel.classList.add('hidden');
-                lyricDisplay.classList.add('hidden');
+                // Instantly restart instead of menu
+                this.initOutrun();
             },
 
             initOutrun: function() {
                 this.state = 'playing';
-                menuPanel.classList.add('hidden');
-                hudPanel.classList.remove('hidden');
                 hudAlert.classList.add('hidden');
-                lyricDisplay.classList.add('hidden');
                 
                 this.camera = { x: 0, y: -100, z: 0 };
                 this.speed = 0;
@@ -428,7 +403,6 @@
                 // Trigger Song Lyrics
                 if (this.nextLyric < this.lyrics.length && this.distance > this.lyrics[this.nextLyric].dist) {
                     lyricText.innerText = this.lyrics[this.nextLyric].text;
-                    lyricDisplay.classList.remove('hidden');
                     this.lyricTimer = 180; // Render frames
                     this.nextLyric++;
                 }
@@ -436,25 +410,17 @@
                 if (this.lyricTimer > 0) {
                     this.lyricTimer--;
                     if (Math.random() > 0.85) {
-                        let scale = 1 + Math.random() * 0.15;
-                        let skew = (Math.random() - 0.5) * 5;
-                        lyricText.style.transform = `scale(${scale}) skewX(${skew}deg)`;
+                        let scale = 1 + Math.random() * 0.05;
+                        lyricText.style.transform = `scale(${scale})`;
                     } else {
-                        lyricText.style.transform = `scale(1) skewX(0deg)`;
+                        lyricText.style.transform = `scale(1)`;
                     }
-                    if (this.lyricTimer <= 0) lyricDisplay.classList.add('hidden');
+                    if (this.lyricTimer <= 0) lyricText.innerText = '';
                 }
 
                 hudStats.innerText = `VELOCITY: ${(this.speed/10).toFixed(0)} | INTEGRITY: ${this.integrity}%`;
             }
         };
-
-        // Hotkey start
-        window.addEventListener('keydown', e => {
-            if (Engine.state === 'menu' && (e.code === 'Space' || e.code === 'Enter')) {
-                Engine.initOutrun();
-            }
-        });
 
         // Hotkey exit
         window.addEventListener('keydown', e => {
@@ -462,6 +428,9 @@
                 window.location.href = '../index.html';
             }
         });
+
+        // Auto-start
+        Engine.initOutrun();
     </script>
 </body>
 </html>
