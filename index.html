@@ -118,6 +118,14 @@
         <button onclick="setNow()" class="btn-sync w-full p-5 border border-[#222] text-[#666] text-[10px] font-bold tracking-[0.4em] uppercase cursor-pointer rounded-lg bg-white/5">
             Sync to System Time
         </button>
+
+        <div class="mt-8 pt-8 border-t border-[#222]">
+            <h2 class="text-[10px] font-light tracking-[0.5em] opacity-40 uppercase mb-4 text-[#ff003c]">TERMINAL // SIMULATIONS</h2>
+            <a href="./games/void_runner.html" class="block w-full p-4 border border-[#222] text-[#aaa] text-[10px] font-bold tracking-[0.4em] uppercase text-left rounded-lg bg-[#0a0a0a] transition-all duration-200 hover:bg-white hover:text-black hover:border-white group flex justify-between items-center">
+                <span>INITIATE // A_PLACE_WITH_NO_NAME</span>
+                <span class="opacity-30 group-hover:text-black">[↗]</span>
+            </a>
+        </div>
     </div>
 
     <script>
@@ -314,6 +322,13 @@
         
         setNow();
         fetchWeather();
+
+        // Hotkey to jump to game
+        window.addEventListener('keydown', e => {
+            if (e.key === 'v') {
+                window.location.href = './games/void_runner.html';
+            }
+        });
     </script>
 </body>
 </html>
