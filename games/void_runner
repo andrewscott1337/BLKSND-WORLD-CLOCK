@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLKSND | A PLACE WITH NO NAME</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Montserrat:wght@900&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #050505; color: #ededed; font-family: 'JetBrains Mono', monospace; overflow: hidden; margin: 0; }
+        
+        .panel { 
+            background: rgba(10, 10, 10, 0.85); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid rgba(255, 255, 255, 0.05); 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.9);
+        }
+
+        .btn-launch { transition: all 0.2s ease; }
+        .btn-launch:hover { background-color: #fff; color: #000; border-color: #fff; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
+        
+        .btn-exit { transition: all 0.2s ease; }
+        .btn-exit:hover { color: #ff003c; border-color: #ff003c; background: rgba(255,0,60,0.1); }
+
+        /* Modern Metalcore Glitch Text */
+        .glitch-text { text-shadow: 3px 0 #ff003c, -3px 0 rgba(0, 255, 255, 0.4); }
+
+        canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
+        #ui-layer { position: relative; z-index: 10; pointer-events: none; }
+        .pointer-auto { pointer-events: auto; }
+        
+        /* Persistent CRT/Monitor Overlay */
+        .scanlines {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 5;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+    <canvas id="gameCanvas"></canvas>
+    <div class="scanlines"></div>
+
+    <div id="ui-layer" class="w-full h-screen flex items-center justify-center p-8">
+        
+        <div id="menu-panel" class="panel w-full max-w-[36rem] p-10 rounded-xl pointer-auto relative overflow-hidden">
+            
+            <div class="flex justify-between items-end border-b border-[#222] pb-8 mb-8">
+                <div>
+                    <h1 class="text-4xl font-black tracking-[0.35em] font-['Montserrat'] uppercase text-white leading-none glitch-text">BLKSND</h1>
+                    <h2 class="text-[10px] font-light tracking-[0.5em] opacity-60 uppercase mt-3 text-[#ff003c]">A Place With No Name // Framework</h2>
+                </div>
+            </div>
+
+            <div class="space-y-4 mb-10 text-center border border-[#111] bg-black/50 p-6 rounded">
+                <p class="text-xs tracking-[0.2em] text-[#aaa] uppercase leading-loose font-light">
+                    "Intoxicate and burying. <br>
+                    <span class="text-[#ff003c] font-bold">Heat Heat Heat Heat up here</span> <br>
+                    Kill me again until I wash over."
+                </p>
+            </div>
+
+            <div class="space-y-3 mb-4">
+                <button onclick="Engine.initOutrun()" class="btn-launch w-full p-5 border border-[#333] text-[#fff] text-[12px] font-black tracking-[0.4em] uppercase cursor-pointer rounded-lg bg-[#050505] text-center group relative overflow-hidden">
+                    <span class="relative z-10">INITIATE // ACCELERATION</span>
+                </button>
+            </div>
+            
+            <div class="mt-6 pt-4 border-t border-white/5 text-[9px] opacity-40 uppercase tracking-widest flex justify-between">
+                <span>Dodge: Left/Right Arrows</span>
+                <span>Overdrive: Hold Spacebar</span>
+            </div>
+        </div>
+
+        <div id="hud-panel" class="hidden absolute top-8 left-8 right-8 flex justify-between items-start pointer-events-none">
+            <div class="flex flex-col gap-1">
+                <h2 class="text-3xl font-black font-['Montserrat'] tracking-[0.3em] uppercase text-white glitch-text" id="hud-title">VOID_RUNNER</h2>
+                <div class="text-[10px] tracking-[0.3em] opacity-60 uppercase mt-1 text-[#aaa]" id="hud-stats">VELOCITY: 0.00 | INTEGRITY: 100%</div>
+                <div class="text-[11px] font-black text-[#ff003c] mt-2 tracking-[0.4em] uppercase hidden glitch-text" id="hud-alert">CRITICAL DAMAGE</div>
+            </div>
+            <button onclick="Engine.exitToMenu()" class="btn-exit px-5 py-3 border border-[#333] text-white text-[10px] font-bold tracking-[0.3em] uppercase cursor-pointer rounded bg-black/80 backdrop-blur pointer-auto">
+                ABORT RUN
+            </button>
+        </div>
+
+        <div id="lyric-display" class="hidden absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+            <h1 class="text-5xl md:text-7xl font-black font-['Montserrat'] tracking-[0.2em] text-white glitch-text text-center w-3/4 leading-tight" style="opacity: 0.9; text-transform: uppercase;"></h1>
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const menuPanel = document.getElementById('menu-panel');
+        const hudPanel = document.getElementById('hud-panel');
+        const hudStats = document.getElementById('hud-stats');
+        const hudAlert = document.getElementById('hud-alert');
+        const lyricDisplay = document.getElementById('lyric-display');
+        const lyricText = lyricDisplay.querySelector('h1');
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Input Handling
+        const keys = {};
+        window.addEventListener('keydown', e => keys[e.code] = true);
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        const Engine = {
+            state: 'menu',
+            animationId: null,
+            lastTime: 0,
+            
+            // 3D Perspective Math
+            camera: { x: 0, y: -100, z: 0 },
+            speed: 0,
+            targetSpeed: 2500, 
+            fov: 350,
+            
+            obstacles: [],
+            gridSize: 400,
+            distance: 0,
+            integrity: 100,
+            glitchFrames: 0,
+            
+            // Sequence timed to distance traveled
+            lyrics: [
+                { dist: 8000, text: "INTOXICATE" },
+                { dist: 16000, text: "AND BURYING" },
+                { dist: 28000, text: "HEAT HEAT HEAT" },
+                { dist: 38000, text: "UP HERE" },
+                { dist: 50000, text: "KILL ME AGAIN" },
+                { dist: 65000, text: "UNTIL I WASH OVER" }
+            ],
+            nextLyric: 0,
+            lyricTimer: 0,
+
+            // Core 3D Projection Engine
+            project: function(x, y, z) {
+                let pZ = Math.max(z - this.camera.z, 1);
+                let scale = this.fov / pZ;
+                return {
+                    x: canvas.width / 2 + (x - this.camera.x) * scale,
+                    y: canvas.height / 2 + (y - this.camera.y) * scale,
+                    scale: scale
+                };
+            },
+
+            exitToMenu: function() {
+                this.state = 'menu';
+                cancelAnimationFrame(this.animationId);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                menuPanel.classList.remove('hidden');
+                hudPanel.classList.add('hidden');
+                lyricDisplay.classList.add('hidden');
+            },
+
+            initOutrun: function() {
+                this.state = 'playing';
+                menuPanel.classList.add('hidden');
+                hudPanel.classList.remove('hidden');
+                hudAlert.classList.add('hidden');
+                lyricDisplay.classList.add('hidden');
+                
+                this.camera = { x: 0, y: -100, z: 0 };
+                this.speed = 0;
+                this.distance = 0;
+                this.integrity = 100;
+                this.glitchFrames = 0;
+                this.obstacles = [];
+                this.nextLyric = 0;
+                this.lyricTimer = 0;
+
+                // Pre-populate the horizon with monolithic structures
+                for(let i=0; i<15; i++) {
+                    this.spawnObstacle(2000 + i * 1000);
+                }
+
+                this.lastTime = performance.now();
+                this.loopOutrun(this.lastTime);
+            },
+
+            spawnObstacle: function(zPos) {
+                let width = 150 + Math.random() * 350;
+                let x = (Math.random() - 0.5) * 2500;
+                let height = 150 + Math.random() * 400;
+                let type = Math.floor(Math.random() * 3); // 0: Block, 1: Spike, 2: Arch
+                this.obstacles.push({ x, z: zPos, width, height, type });
+            },
+
+            drawGlitch: function() {
+                if (this.glitchFrames <= 0) return;
+                this.glitchFrames--;
+                
+                // Audio-waveform style visual tearing
+                let slices = 5 + Math.floor(Math.random() * 15);
+                for(let i=0; i<slices; i++) {
+                    let sy = Math.random() * canvas.height;
+                    let sh = 5 + Math.random() * 40;
+                    let dx = (Math.random() - 0.5) * 150;
+                    ctx.drawImage(canvas, 0, sy, canvas.width, sh, dx, sy, canvas.width, sh);
+                }
+                
+                // Retinal flash
+                ctx.globalCompositeOperation = 'screen';
+                ctx.fillStyle = 'rgba(255, 0, 60, 0.15)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.globalCompositeOperation = 'source-over';
+            },
+
+            drawSun: function() {
+                let cx = canvas.width / 2;
+                let cy = canvas.height / 2;
+                
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(cx, cy, 200, Math.PI, 0); 
+                ctx.fillStyle = '#ff003c'; 
+                ctx.fill();
+
+                // Aggressive horizontal slicing on the sun
+                ctx.fillStyle = '#050505';
+                for(let i=0; i<10; i++) {
+                    let yPos = cy - i*20;
+                    let h = 2 + i*2;
+                    ctx.fillRect(cx - 250, yPos, 500, h);
+                }
+                ctx.restore();
+            },
+
+            loopOutrun: function(timestamp) {
+                if(this.state !== 'playing') return;
+                this.animationId = requestAnimationFrame(t => this.loopOutrun(t));
+                
+                let dt = (timestamp - this.lastTime) / 1000;
+                this.lastTime = timestamp;
+                if (dt > 0.1) dt = 0.1;
+
+                // Acceleration Physics
+                let boost = keys['Space'] ? 1.8 : 1;
+                let currentTargetSpeed = this.targetSpeed * boost;
+                
+                if(this.speed < currentTargetSpeed) this.speed += 3000 * dt;
+                if(this.speed > currentTargetSpeed) this.speed -= 5000 * dt;
+
+                this.camera.z += this.speed * dt;
+                this.distance = this.camera.z;
+
+                // Evasive Maneuvers
+                if (keys['ArrowLeft']) this.camera.x -= 2000 * dt;
+                if (keys['ArrowRight']) this.camera.x += 2000 * dt;
+
+                // Track constraints
+                if (this.camera.x < -2000) this.camera.x = -2000;
+                if (this.camera.x > 2000) this.camera.x = 2000;
+
+                // Render Background & Sun
+                ctx.fillStyle = '#050505';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                this.drawSun();
+
+                // Draw Infinite Grid Floor
+                ctx.lineWidth = 1;
+                for(let x = -4000; x <= 4000; x += this.gridSize) {
+                    let p1 = this.project(x, 0, this.camera.z + 10);
+                    let p2 = this.project(x, 0, this.camera.z + 12000);
+                    
+                    let grad = ctx.createLinearGradient(p1.x, p1.y, p2.x, p2.y);
+                    grad.addColorStop(0, 'rgba(255, 0, 60, 0.9)');
+                    grad.addColorStop(1, 'rgba(255, 0, 60, 0)');
+                    
+                    ctx.strokeStyle = grad;
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                }
+
+                let offsetZ = this.camera.z % this.gridSize;
+                ctx.strokeStyle = '#ff003c';
+                for(let z = 0; z < 12000; z += this.gridSize) {
+                    let actualZ = this.camera.z + z - offsetZ;
+                    if(actualZ <= this.camera.z) continue;
+                    
+                    let p1 = this.project(-4000, 0, actualZ);
+                    let p2 = this.project(4000, 0, actualZ);
+                    
+                    let alpha = 1 - (z / 12000);
+                    ctx.globalAlpha = alpha * 0.7;
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1;
+
+                // Manage and Draw Obstacles (Back to Front)
+                let sortedObs = [...this.obstacles].sort((a,b) => b.z - a.z);
+
+                for(let i = this.obstacles.length - 1; i >= 0; i--) {
+                    let obs = this.obstacles[i];
+                    
+                    // Recycle passed objects
+                    if (obs.z < this.camera.z) {
+                        this.obstacles.splice(i, 1);
+                        this.spawnObstacle(this.camera.z + 12000 + Math.random() * 2000);
+                        continue;
+                    }
+
+                    // Collision Detection
+                    if (obs.z > this.camera.z && obs.z < this.camera.z + 250) {
+                        if (obs.type !== 2) { // Archways are safe to pass under
+                            if (Math.abs(this.camera.x - obs.x) < obs.width / 2 + 60) {
+                                this.integrity -= 25;
+                                this.speed *= 0.2; 
+                                this.glitchFrames = 20;
+                                this.obstacles.splice(i, 1);
+                                this.spawnObstacle(this.camera.z + 12000);
+                                
+                                hudAlert.classList.remove('hidden');
+                                setTimeout(() => hudAlert.classList.add('hidden'), 500);
+                                
+                                if (this.integrity <= 0) {
+                                    this.exitToMenu();
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                for(let obs of sortedObs) {
+                    if (obs.z > this.camera.z + 12000) continue; 
+                    
+                    let alpha = 1 - ((obs.z - this.camera.z) / 12000);
+                    ctx.globalAlpha = Math.max(0, alpha);
+                    ctx.lineWidth = 2;
+
+                    // Note: heights are negated because Y goes down in canvas, but we want structures to go UP
+                    if (obs.type === 0) { // Brutalist Block
+                        let bl = this.project(obs.x - obs.width/2, 0, obs.z);
+                        let br = this.project(obs.x + obs.width/2, 0, obs.z);
+                        let tl = this.project(obs.x - obs.width/2, -obs.height, obs.z);
+                        let tr = this.project(obs.x + obs.width/2, -obs.height, obs.z);
+                        
+                        ctx.fillStyle = '#050505';
+                        ctx.beginPath();
+                        ctx.moveTo(bl.x, bl.y); ctx.lineTo(br.x, br.y); ctx.lineTo(tr.x, tr.y); ctx.lineTo(tl.x, tl.y);
+                        ctx.fill();
+                        ctx.strokeStyle = '#fff';
+                        ctx.stroke();
+                    } 
+                    else if (obs.type === 1) { // Crystal Spike
+                        let bl = this.project(obs.x - obs.width/2, 0, obs.z);
+                        let br = this.project(obs.x + obs.width/2, 0, obs.z);
+                        let tc = this.project(obs.x, -obs.height, obs.z);
+                        
+                        ctx.fillStyle = '#050505';
+                        ctx.beginPath();
+                        ctx.moveTo(bl.x, bl.y); ctx.lineTo(br.x, br.y); ctx.lineTo(tc.x, tc.y);
+                        ctx.fill();
+                        ctx.strokeStyle = '#ff003c';
+                        ctx.stroke();
+                    }
+                    else if (obs.type === 2) { // Ritual Archway
+                        let hw = obs.width / 2;
+                        let bl1 = this.project(obs.x - hw - 80, 0, obs.z);
+                        let br1 = this.project(obs.x - hw, 0, obs.z);
+                        let tl1 = this.project(obs.x - hw - 80, -obs.height, obs.z);
+                        let tr1 = this.project(obs.x - hw, -obs.height, obs.z);
+                        
+                        let bl2 = this.project(obs.x + hw, 0, obs.z);
+                        let br2 = this.project(obs.x + hw + 80, 0, obs.z);
+                        let tl2 = this.project(obs.x + hw, -obs.height, obs.z);
+                        let tr2 = this.project(obs.x + hw + 80, -obs.height, obs.z);
+
+                        ctx.fillStyle = '#0a0a0a';
+                        ctx.strokeStyle = '#555';
+                        
+                        ctx.beginPath(); ctx.moveTo(bl1.x, bl1.y); ctx.lineTo(br1.x, br1.y); ctx.lineTo(tr1.x, tr1.y); ctx.lineTo(tl1.x, tl1.y); ctx.fill(); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(bl2.x, bl2.y); ctx.lineTo(br2.x, br2.y); ctx.lineTo(tr2.x, tr2.y); ctx.lineTo(tl2.x, tl2.y); ctx.fill(); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(tl1.x, tl1.y); ctx.lineTo(tr2.x, tr2.y); ctx.lineTo(br2.x, tr2.y + (br2.y - tr2.y)*0.1); ctx.lineTo(bl1.x, tl1.y + (bl1.y - tl1.y)*0.1); ctx.fill(); ctx.stroke();
+                    }
+                }
+                ctx.globalAlpha = 1;
+
+                // Draw Drone (Geometric Ship)
+                let shipY = canvas.height - 120;
+                let shipX = canvas.width / 2;
+                let bank = (keys['ArrowRight'] ? 0.3 : 0) - (keys['ArrowLeft'] ? 0.3 : 0);
+                
+                ctx.save();
+                ctx.translate(shipX, shipY);
+                ctx.rotate(bank);
+                
+                ctx.beginPath();
+                ctx.moveTo(0, -35);
+                ctx.lineTo(25, 20);
+                ctx.lineTo(0, 10);
+                ctx.lineTo(-25, 20);
+                ctx.closePath();
+                ctx.fillStyle = '#0a0a0a';
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Thrust VFX
+                ctx.beginPath();
+                ctx.moveTo(-12, 16);
+                ctx.lineTo(0, 15 + Math.random()*30 * boost);
+                ctx.lineTo(12, 16);
+                ctx.strokeStyle = '#ff003c';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.restore();
+
+                // Apply Post-Processing Glitch
+                this.drawGlitch();
+
+                // Trigger Song Lyrics
+                if (this.nextLyric < this.lyrics.length && this.distance > this.lyrics[this.nextLyric].dist) {
+                    lyricText.innerText = this.lyrics[this.nextLyric].text;
+                    lyricDisplay.classList.remove('hidden');
+                    this.lyricTimer = 180; // Render frames
+                    this.nextLyric++;
+                }
+
+                if (this.lyricTimer > 0) {
+                    this.lyricTimer--;
+                    if (Math.random() > 0.85) {
+                        let scale = 1 + Math.random() * 0.15;
+                        let skew = (Math.random() - 0.5) * 5;
+                        lyricText.style.transform = `scale(${scale}) skewX(${skew}deg)`;
+                    } else {
+                        lyricText.style.transform = `scale(1) skewX(0deg)`;
+                    }
+                    if (this.lyricTimer <= 0) lyricDisplay.classList.add('hidden');
+                }
+
+                hudStats.innerText = `VELOCITY: ${(this.speed/10).toFixed(0)} | INTEGRITY: ${this.integrity}%`;
+            }
+        };
+
+        // Hotkey start
+        window.addEventListener('keydown', e => {
+            if (Engine.state === 'menu' && (e.code === 'Space' || e.code === 'Enter')) {
+                Engine.initOutrun();
+            }
+        });
+    </script>
+</body>
+</html>
