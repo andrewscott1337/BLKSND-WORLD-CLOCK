@@ -209,7 +209,7 @@
             const lats = Object.values(locData).map(l => l.lat).join(',');
             const lons = Object.values(locData).map(l => l.lon).join(',');
             try {
-                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current_weather=true`);
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=temperature_2m,weather_code,is_day`);
                 const data = await res.json();
                 
                 const results = Array.isArray(data) ? data : (data.length ? data : [data]); 
@@ -220,13 +220,13 @@
 
                 for (let i = 0; i < locKeys.length; i++) {
                     const loc = locKeys[i];
-                    const weather = isDataArray ? data[i].current_weather : (isMultiLoc ? data[i].current_weather : data.current_weather);
+                    const weather = isDataArray ? data[i].current : (isMultiLoc ? data[i].current : data.current);
                     
                     if(weather) {
-                        const tempC = Math.round(weather.temperature);
+                        const tempC = Math.round(weather.temperature_2m);
                         const tempF = Math.round((tempC * 9/5) + 32);
                         document.getElementById(`w-temp-${loc}`).innerHTML = `${tempC}°C <span class="opacity-20 mx-1">|</span> ${tempF}°F`;
-                        document.getElementById(`w-icon-${loc}`).innerHTML = getIconByWMO(weather.weathercode, weather.is_day);
+                        document.getElementById(`w-icon-${loc}`).innerHTML = getIconByWMO(weather.weather_code, weather.is_day);
                     }
                 }
             } catch (e) { console.error("Weather Sync Error", e); }
