@@ -168,7 +168,9 @@
 
         function buildUI() {
             const container = document.getElementById('locations-container');
-            Object.keys(locData).forEach(loc => {
+            const locKeys = Object.keys(locData);
+            for (let i = 0; i < locKeys.length; i++) {
+                const loc = locKeys[i];
                 const data = locData[loc];
                 const html = `
                 <div class="location-card p-4 flex justify-between items-center">
@@ -202,7 +204,7 @@
                 </div>
                 `;
                 container.insertAdjacentHTML('beforeend', html);
-            });
+            }
         }
 
         async function fetchWeather() {
@@ -232,20 +234,23 @@
             } catch (e) { console.error("Weather Sync Error", e); }
         }
 
+        const getDec = (d, zone) => {
+            if (!d || isNaN(d.getTime())) return null;
+            const str = d.toLocaleTimeString('en-GB', { timeZone: zone, hour12: false });
+            const [h, m] = str.split(':').map(Number);
+            return h + (m/60);
+        };
+
         function calibrateAstronomicalDials() {
             const now = new Date();
-            Object.keys(locData).forEach(loc => {
+            const locKeys = Object.keys(locData);
+            for (let i = 0; i < locKeys.length; i++) {
+                const loc = locKeys[i];
                 const data = locData[loc];
                 const times = SunCalc.getTimes(now, data.lat, data.lon);
                 
-                const getDec = (d) => {
-                    const str = d.toLocaleTimeString('en-GB', { timeZone: data.zone, hour12: false });
-                    const [h, m] = str.split(':').map(Number);
-                    return h + (m/60);
-                };
-
-                const sr = getDec(times.sunrise);
-                const ss = getDec(times.sunset);
+                const sr = getDec(times.sunrise, data.zone);
+                const ss = getDec(times.sunset, data.zone);
                 
                 const dial = document.getElementById(`dial-${loc}`);
                 dial.style.background = `conic-gradient(from 0deg, #111 0deg, #111 ${(sr/24)*360}deg, #d4d4d4 ${(sr/24)*360}deg, #d4d4d4 ${(ss/24)*360}deg, #111 ${(ss/24)*360}deg, #111 360deg)`;
@@ -255,7 +260,7 @@
                 
                 document.getElementById(`sun-${loc}`).style.transform = `translate(-50%, -50%) rotate(${nDeg}deg) translateY(-12px)`;
                 document.getElementById(`moon-${loc}`).style.transform = `translate(-50%, -50%) rotate(${mDeg}deg) translateY(-12px)`;
-            });
+            }
         }
 
         const tzOffsetCache = {};
@@ -276,7 +281,9 @@
             const sourceOff = getTzOffset(locData[source].zone);
             const utcHours = h - sourceOff;
 
-            Object.keys(locData).forEach(loc => {
+            const locKeys = Object.keys(locData);
+            for (let i = 0; i < locKeys.length; i++) {
+                const loc = locKeys[i];
                 const off = getTzOffset(locData[loc].zone);
                 let localH = Math.floor(utcHours + off) % 24;
                 if (localH < 0) localH += 24;
@@ -299,7 +306,7 @@
                 // Rotate Astronomical Dial
                 const deg = -((localH + (m/60))/24)*360;
                 document.getElementById(`dial-${loc}`).style.transform = `rotate(${deg}deg)`;
-            });
+            }
         }
 
         function setNow() {
