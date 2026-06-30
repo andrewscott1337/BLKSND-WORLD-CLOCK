@@ -209,7 +209,7 @@
             const lats = Object.values(locData).map(l => l.lat).join(',');
             const lons = Object.values(locData).map(l => l.lon).join(',');
             try {
-                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current_weather=true`);
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=temperature_2m,weather_code,is_day`);
                 const data = await res.json();
                 
                 const results = Array.isArray(data) ? data : (data.length ? data : [data]); 
@@ -220,17 +220,24 @@
 
                 for (let i = 0; i < locKeys.length; i++) {
                     const loc = locKeys[i];
-                    const weather = isDataArray ? data[i].current_weather : (isMultiLoc ? data[i].current_weather : data.current_weather);
+                    const weather = isDataArray ? data[i].current : (isMultiLoc ? data[i].current : data.current);
                     
                     if(weather) {
-                        const tempC = Math.round(weather.temperature);
+                        const tempC = Math.round(weather.temperature_2m);
                         const tempF = Math.round((tempC * 9/5) + 32);
                         document.getElementById(`w-temp-${loc}`).innerHTML = `${tempC}°C <span class="opacity-20 mx-1">|</span> ${tempF}°F`;
-                        document.getElementById(`w-icon-${loc}`).innerHTML = getIconByWMO(weather.weathercode, weather.is_day);
+                        document.getElementById(`w-icon-${loc}`).innerHTML = getIconByWMO(weather.weather_code, weather.is_day);
                     }
                 }
             } catch (e) { console.error("Weather Sync Error", e); }
         }
+
+        const getDec = (d, timeZone) => {
+            if (!d || isNaN(d.getTime())) return null;
+            const str = d.toLocaleTimeString('en-GB', { timeZone: timeZone, hour12: false });
+            const [h, m] = str.split(':').map(Number);
+            return h + (m/60);
+        };
 
         function calibrateAstronomicalDials() {
             const now = new Date();
@@ -238,14 +245,11 @@
                 const data = locData[loc];
                 const times = SunCalc.getTimes(now, data.lat, data.lon);
                 
-                const getDec = (d) => {
-                    const str = d.toLocaleTimeString('en-GB', { timeZone: data.zone, hour12: false });
-                    const [h, m] = str.split(':').map(Number);
-                    return h + (m/60);
-                };
+                let sr = getDec(times.sunrise, data.zone);
+                let ss = getDec(times.sunset, data.zone);
 
-                const sr = getDec(times.sunrise);
-                const ss = getDec(times.sunset);
+                if (sr === null) sr = 6;
+                if (ss === null) ss = 18;
                 
                 const dial = document.getElementById(`dial-${loc}`);
                 dial.style.background = `conic-gradient(from 0deg, #111 0deg, #111 ${(sr/24)*360}deg, #d4d4d4 ${(sr/24)*360}deg, #d4d4d4 ${(ss/24)*360}deg, #111 ${(ss/24)*360}deg, #111 360deg)`;
