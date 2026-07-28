@@ -309,9 +309,9 @@
 
         function setNow() {
             const n = new Date();
-            const h = String(n.getHours()).padStart(2, '0');
-            const m = String(n.getMinutes()).padStart(2, '0');
-            document.getElementById('input-la').value = `${h}:${m}`;
+            const str = n.toLocaleTimeString('en-GB', { timeZone: locData['la'].zone, hourCycle: 'h23' });
+            const [h, m] = str.split(':');
+            document.getElementById('input-la').value = `${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
             syncTimes('la');
         }
 
